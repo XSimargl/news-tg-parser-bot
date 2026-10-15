@@ -1,1 +1,4 @@
 python-dotenv
+httpx
+feedparser
+beautifulsoup4

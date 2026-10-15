@@ -9,7 +9,7 @@ DB_PATH = os.getenv("DB_PATH", "database/news.db")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:4b")
 
-if (not API_KEY_TG) or (ADMIN_CHAT_ID is None):
+if (not API_KEY_TG) or (not ADMIN_CHAT_ID):
     raise ValueError("Нету апи или тг айди")
 
-ADMIN_CHAT_ID = int("ADMIN_CHAT_ID")
+ADMIN_CHAT_ID = int(ADMIN_CHAT_ID)
