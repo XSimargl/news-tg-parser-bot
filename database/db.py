@@ -45,19 +45,3 @@ def  update_news_status(news_id: int, status: str, ai_summary: str | None = None
         cursor.execute("UPDATE news SET status = ?, ai_summary = ? WHERE id = ?", (status, ai_summary, news_id))
     conn.close()
     
-if __name__ == "__main__":
-    init_db()
-    test_news = [
-        {
-            "title": "Вышел Python 3.15 с новым ускорителем",
-            "link": "https://example.com/python-3-15",
-            "published": "Sat, 17 Oct 2026 15:00:00 GMT",
-            "summary": "Разработчики представили новую версию языка с улучшенной производительностью."
-        }
-    ]
-    save_news(test_news)
-    print("Новость успешно отправлена в БД!")
-
-    # 4. Проверяем, что она там лежит со статусом 'raw'
-    raw_item = get_raw_news()
-    print("Достали из базы:", raw_item)
