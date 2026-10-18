@@ -31,9 +31,7 @@ def get_rss_news(rss_url: str, limit: int):
                 "published": item.get("published"),
                 "summary": clean_summary
             }
-            full_text = get_article_text(item.get("link"))
-            if full_text:
-                news_data["summary"] = full_text
+            
             news_list.append(news_data)  
     return news_list
 
@@ -46,7 +44,7 @@ def get_article_text(url: str) -> str:
         soup = BeautifulSoup(response.text, "html.parser")
         article_block = soup.find("div", class_="tm-article-body") or soup.find("article")
         if article_block:
-            return article_block.get_text(separator=" ", strip=True)[:3000]
+            return article_block.get_text(separator=" ", strip=True)[:18000]
         return ""
     except httpx.HTTPError as e:
         print("Ошибка")
