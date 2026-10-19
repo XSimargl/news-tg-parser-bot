@@ -1,10 +1,10 @@
 from database.db import init_db, save_news, get_raw_news, update_news_status
 from modules.fetcher import get_rss_news, get_article_text
 from modules.processor import news_analis
-
+from modules.bot import send_aler
 import config
 import json
-
+import asyncio
 
 
 def main():
@@ -41,7 +41,7 @@ def main():
                 status="rejected", 
                 ai_summary="Ошибка скачивания текста"
             )
-    
+    asyncio.run(send_aler())
     
 
 if __name__ == "__main__":

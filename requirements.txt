@@ -2,3 +2,4 @@ python-dotenv
 httpx
 feedparser
 beautifulsoup4
+aiogram

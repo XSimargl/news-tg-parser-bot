@@ -45,3 +45,12 @@ def  update_news_status(news_id: int, status: str, ai_summary: str | None = None
         cursor.execute("UPDATE news SET status = ?, ai_summary = ? WHERE id = ?", (status, ai_summary, news_id))
     conn.close()
     
+def get_approved_news(db_path: str = config.DB_PATH):
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, title, link, ai_summary FROM news WHERE status = 'approved'")
+        rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+        
