@@ -1,7 +1,7 @@
 import json
 import httpx
 import config
-
+import logging
 url_ollama = config.OLLAMA_URL
 model_ollama = config.OLLAMA_MODEL
 
@@ -32,6 +32,6 @@ def news_analis(title: str, text: str):
         
         return json.loads(ai_text)
     except Exception as e:
-        print(f"Ошибка при обращении к нейросети: {e}")
+        logging.error(f"Ошибка при обращении к нейросети: {e}")
        
         return {"is_positive": None, "short_review": "Ошибка обработки"}

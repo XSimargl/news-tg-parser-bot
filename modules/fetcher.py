@@ -1,7 +1,7 @@
 import feedparser
 from bs4 import BeautifulSoup
 import httpx
-
+import logging
 def get_rss_news(rss_url: str, limit: int):
     headers = {"User-Agent": "Mozilla/5.0"}
     try:
@@ -10,7 +10,7 @@ def get_rss_news(rss_url: str, limit: int):
         raw_data = feedparser.parse(response.text)
         
     except httpx.HTTPError as e:
-       print("Ебать а тут ошибка с парсингм") 
+       logging.error("Ошибка с парсингом") 
        return []
     news_list = []
     
@@ -47,7 +47,7 @@ def get_article_text(url: str) -> str:
             return article_block.get_text(separator=" ", strip=True)[:18000]
         return ""
     except httpx.HTTPError as e:
-        print("Ошибка")
+        logging.error("Ошибка", e)
         return ""
 if __name__ == "__main__":
     a = get_rss_news("https://habr.com/ru/rss/articles/", 5)
