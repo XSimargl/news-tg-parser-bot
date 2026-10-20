@@ -47,7 +47,7 @@ def get_article_text(url: str) -> str:
             return article_block.get_text(separator=" ", strip=True)[:18000]
         return ""
     except httpx.HTTPError as e:
-        logging.error("Ошибка", e)
+        logging.error(f"Ошибка: {e}")
         return ""
 if __name__ == "__main__":
     a = get_rss_news("https://habr.com/ru/rss/articles/", 5)

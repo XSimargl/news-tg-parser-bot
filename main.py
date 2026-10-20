@@ -42,10 +42,10 @@ def main():
                 if full_text:
                     logging.info("ИИ думает")
                     ai_result = news_analis(news["title"], news["summary"])
-                    if ai_result["is_positive"]:
-                        new_status = "approved"
-                    else:
-                        new_status = "rejected"
+                    if ai_result["is_positive"] is None:
+                        logging.error(f"Остановка конвейера. Причина: {ai_result['short_review']}")
+                        break
+                    new_status = "approved" if ai_result["is_positive"] else "rejected"
                     update_news_status(news_id=news["id"], status=new_status, ai_summary=ai_result["short_review"])
                     logging.info(f"Ответ от ИИ: {ai_result["short_review"]}")
                     logging.info(f"Новость успешно обновлена в БД со статусом '{new_status}'!")
@@ -64,8 +64,8 @@ def main():
         except Exception as err:
             logging.error(f"Сбой в главном цикле: {err}")
             
-        logging.info("Уходим в спячку на 60 секунд...")
-        time.sleep(900)
+        logging.info("Уходим в спячку на 1 час...")
+        time.sleep(3600)
     
 
 if __name__ == "__main__":

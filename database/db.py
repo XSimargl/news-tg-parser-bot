@@ -56,10 +56,11 @@ def get_approved_news(db_path: str = config.DB_PATH):
 
 def clean_old_news(keep_limit: int = 500, db_path: str = config.DB_PATH):
     with sqlite3.connect(db_path) as conn:
-        cursor = conn,cursor()
+        cursor = conn.cursor()
         
         cursor.execute("""DELETE FROM news
                        WHERE id NOT IN(
-                           SELECT id FROM news ORDER BY in DESC LIMIT ?)""", (keep_limit))
+                           SELECT id FROM news ORDER BY id DESC LIMIT ?)""", (keep_limit,))
         deleted_count = cursor.rowcount
-        return deleted_count
+    conn.close()
+    return deleted_count
