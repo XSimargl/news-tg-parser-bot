@@ -1,37 +1,59 @@
 import json
-import httpx
+import time
 import config
 import logging
-url_ollama = config.OLLAMA_URL
-model_ollama = config.OLLAMA_MODEL
+from google import genai
+from google.genai import types
 
+
+api_gemini = config.API_KEY_GEMINI
+models_pool = config.models_pool
+client = genai.Client(
+    api_key=api_gemini
+)
 def news_analis(title: str, text: str):
+    
     user_pront = f"Заголовок: {title}\n\n Текст новости: {text}"
-    payload = {
-    "model": model_ollama,
-    "system": (
-        "Ты строгий оценщик IT-новостей. Целевые темы: Python, SQL, БД, Git, Linux, Docker, ИИ, "
-        "локальные LLM, ML, DS, компьютерное железо, Open Source, карьера и поиск работы. "
-        "Категорически отклоняй (is_positive: false): маркетинг, SEO, контекстную рекламу, воронки продаж, лиды и конверсии, корпоративный PR и социальные инициативы. "
-        "Если новость подходит, напиши short_review (4-6 предложений) по трем строгим правилам: "
-        "1. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕН канцелярит («В статье рассказывается», «Автор делится», «Статья анализирует»). Пиши сразу по сути, живо и с легкой инженерной иронией. "
-        "2. Требуется фактура: обязательно вытаскивай конкретные названия технологий, стек, метрики производительности, цифры ускорения или размер кодовой базы. "
-        "3. Последним предложением обязательно напиши, что лежит по ссылке, начиная со слова «Внутри: » (например: «Внутри: готовый скрипт миграции, схема БД и разбор граблей с памятью»). "
-        "Верни строго JSON: {\"is_positive\": true/false, \"short_review\": \"текст отзыва\"}."
-    ),
-    "prompt": user_pront,
-    "stream": False,
-    "format": "json",
-    "options": {"num_ctx": 8192, "temperature": 0.2}
-}
-    try:
-        resp = httpx.post(url_ollama, json=payload, timeout=300.0)
-        resp.raise_for_status()
-        
-        ai_text = resp.json()["response"]
-        
-        return json.loads(ai_text)
-    except Exception as e:
-        logging.error(f"Ошибка при обращении к нейросети: {e}")
-       
-        return {"is_positive": None, "short_review": "Ошибка обработки"}
+    
+    for model_name in models_pool:
+        try:
+            logging.info(f"Отправка новости в ИИ, модель: {model_name}")
+            response = client.models.generate_content(
+                model= model_name,
+                contents= user_pront,
+                config=types.GenerateContentConfig(
+                    system_instruction=(
+                    "Ты — главный редактор IT-дайджеста. Твоя задача — отфильтровать статью и написать "
+                    "емкое превью для разработчиков.\n\n"
+                    "ЦЕЛЕВЫЕ ТЕМЫ (is_positive: true):\n"
+                    "Python, SQL, базы данных, Git, Linux, Docker, ИИ, LLM, ML, Data Science, "
+                    "компьютерное железо, архитектура, Open Source, карьера в IT, поиск работы и собеседования.\n\n"
+                    "ЧЕРНЫЙ СПИСОК (is_positive: false):\n"
+                    "Реклама курсов, корпоративные пресс-релизы, маркетинг, SEO, воронки продаж, "
+                    "снижение цены лида/заявки, социальные инициативы .\n\n"
+                    "ПРАВИЛА ДЛЯ ПОЛЯ short_review (строго 5-7 предложения по трехчастной структуре):\n"
+                    "1. Суть и контекст (1 предложение): Что именно вышло или какую инженерную проблему решали. "
+                    "Напиши так, чтобы суть сразу понял даже тот, кто впервые слышит название проекта или инструмента.\n"
+                    "2. Как устроено и главный результат (1–2 предложения): Выдели только 1–2 ключевых технических факта "
+                    "или архитектурных решения и поясни, почему это важно или круто. Не перечисляй второстепенные цифры, "
+                    "случайные версии пакетов и мелкие метрики — оставь только главное.\n"
+                    "3. Итог и практическая польза (1 предложение): Главный вывод автора или что конкретно читатель "
+                    "может забрать из статьи в свою практику (готовый код, схему, разбор ошибок).\n\n"
+                    "СТИЛЬ:\n"
+                    "Категорически запрещены штампы: «В статье рассказывается», «Автор делится», «Статья посвящена», "
+                    "«Рассматривается». Пиши сразу по делу, живым инженерным языком.\n\n"
+                    "ФОРМАТ ОТВЕТА:\n"
+                    "Верни строго валидный JSON без маркдаун-оберток:\n"
+                    "{\"is_positive\": true/false, \"short_review\": \"текст превью\"}"
+                    ),
+                    response_mime_type="application/json",
+                    temperature=0.4
+                    )
+                )
+            ai_text = response.text
+            return json.loads(ai_text)
+            
+        except Exception as e:
+            logging.warning(f"Модель {model_name} не справилась ({e}), пробуем следующую...")
+            time.sleep(2)
+    return {"is_positive": None, "short_review": "Ошибка обработки"}
