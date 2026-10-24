@@ -2,6 +2,8 @@ import feedparser
 from bs4 import BeautifulSoup
 import httpx
 import logging
+import trafilatura
+
 def get_rss_news(rss_url: str, limit: int):
     headers = {"User-Agent": "Mozilla/5.0"}
     try:
@@ -10,16 +12,21 @@ def get_rss_news(rss_url: str, limit: int):
         raw_data = feedparser.parse(response.text)
         
     except httpx.HTTPError as e:
-       logging.error("Ошибка с парсингом") 
+       logging.error(f"Ошибка с парсингом: {e}") 
        return []
     news_list = []
     
     if raw_data.entries:
         for item in raw_data.entries[:limit]:
-            raw_data_summary = item.get("summary")
+            raw_html = ""
+            if "content" in item and len(item.content) > 0:
+                raw_html = item.content[0].get("value", "")
+            if not raw_html:
+                raw_html = item.get("summary", "")
             
-            if raw_data_summary:
-                clean_summary = BeautifulSoup(raw_data_summary, "html.parser").get_text(separator=" ", strip=True)
+            
+            if raw_html:
+                clean_summary = BeautifulSoup(raw_html, "html.parser").get_text(separator=" ", strip=True)
             else:
                 clean_summary = ""
             news_data  = {
@@ -36,19 +43,22 @@ def get_rss_news(rss_url: str, limit: int):
     return news_list
 
 def get_article_text(url: str) -> str:
-    headers = {"User-Agent": "Mozilla/5.0"}
+    downlodr = trafilatura.fetch_url(url)
     
-    try:
-        response = httpx.get(url, headers=headers,follow_redirects=True, timeout=10.0)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
-        article_block = soup.find("div", class_="tm-article-body") or soup.find("article")
-        if article_block:
-            return article_block.get_text(separator=" ", strip=True)[:18000]
+    if not downlodr:
+        logging.error(f"Не удолось скачать статью: {url}")
         return ""
-    except httpx.HTTPError as e:
-        logging.error(f"Ошибка: {e}")
-        return ""
+    
+    text = trafilatura.extract(
+        downlodr,
+        include_comments=False,
+        include_tables=True,
+        output_format="markdown"
+    )
+    if text:
+        return text
+    return ""
+        
 if __name__ == "__main__":
     a = get_rss_news("https://habr.com/ru/rss/articles/", 5)
     print(a)

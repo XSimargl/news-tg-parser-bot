@@ -24,9 +24,11 @@ def main():
     init_db()
     while True:
         try:
-            logging.info("Идем на Хабр за свежими новостями...")
-            news_list = get_rss_news("https://habr.com/ru/rss/articles/", limit=3)
-            save_news(news_list)
+            for feed_url in config.url_news:
+                logging.info(f"Проверяем RSS: {feed_url}")
+                news_list = get_rss_news(feed_url, limit=3)
+                if news_list: 
+                    save_news(news_list)
             
         
         
@@ -38,10 +40,18 @@ def main():
                     break
                 logging.info(f"Обрабатываем новость: {news['title']}")
                 full_text = get_article_text(news["link"])
-                news["summary"] = full_text
-                if full_text:
+                rss_summary = news.get("summary", "")
+                if full_text and len(full_text) >= 300:
+                    text_to_analyze = full_text
+                    logging.info("Успешно скачан полный текст статьи.")
+                elif rss_summary and len(rss_summary) >= 80:
+                    text_to_analyze = rss_summary
+                    logging.info("Полный текст недоступен. Используем запасное описание из RSS.")
+                else:
+                    return ""
+                if text_to_analyze:
                     logging.info("ИИ думает")
-                    ai_result = news_analis(news["title"], news["summary"])
+                    ai_result = news_analis(news["title"], text_to_analyze)
                     if ai_result["is_positive"] is None:
                         logging.error(f"Остановка конвейера. Причина: {ai_result['short_review']}")
                         break
@@ -49,6 +59,7 @@ def main():
                     update_news_status(news_id=news["id"], status=new_status, ai_summary=ai_result["short_review"])
                     logging.info(f"Ответ от ИИ: {ai_result["short_review"]}")
                     logging.info(f"Новость успешно обновлена в БД со статусом '{new_status}'!")
+                    time.sleep(4)
                     
                 else:
                     logging.error("Текст не найден, помечаем как rejected...\n")
