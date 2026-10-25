@@ -12,8 +12,9 @@ def init_db(db_path: str = config.DB_PATH):
                     link TEXT UNIQUE,
                     published TEXT,
                     summary TEXT,
+                    score INTEGER DEFAULT 0,
                     status  VARCHAR(20) NOT NULL DEFAULT 'raw'
-                            CHECK (status IN ('raw', 'approved', 'rejected', 'sent')),
+                            CHECK (status IN ('raw', 'selected', 'approved', 'rejected', 'sent')),
                     ai_summary TEXT)""")
     conn.close()
     
@@ -26,12 +27,19 @@ def save_news(news_list: list[dict],db_path: str = config.DB_PATH):
             VALUES (?, ?, ?, ?)""", (item['title'], item['link'], item['published'], item['summary']))
     conn.close()
     
-def get_raw_news(db_path: str = config.DB_PATH):
+def get_selected_news(db_path: str = config.DB_PATH):
     with sqlite3.connect(db_path) as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute("SELECT id, title, link, summary FROM news WHERE status = 'raw' LIMIT 1")
+        cursor.execute("""
+                        SELECT id, title, link, summary, score 
+                        FROM news 
+                        WHERE status = 'selected' 
+                        ORDER BY score DESC 
+                        LIMIT 1
+                    """)
         row = cursor.fetchone()
+        
     conn.close()
     if row:
         return dict(row)
@@ -64,3 +72,21 @@ def clean_old_news(keep_limit: int = 500, db_path: str = config.DB_PATH):
         deleted_count = cursor.rowcount
     conn.close()
     return deleted_count
+
+def get_raw_news_all(db_path: str = config.DB_PATH):
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, title, summary FROM news WHERE status = 'raw' LIMIT 50")
+        rows = cursor.fetchall()
+    conn.close()
+    if rows:
+        return [dict(row) for row in rows]
+    else:
+        return []
+    
+def update_bouncer_score(news_id: int, status: str, score: int | None = None, db_path: str = config.DB_PATH):
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE news SET status = ?, score = ? WHERE id = ?", (status, score, news_id))
+    conn.close()
