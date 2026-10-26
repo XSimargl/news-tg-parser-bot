@@ -65,7 +65,7 @@ def main():
                     logging.info("Полный текст недоступен. Используем запасное описание из RSS.")
                 else:    
                     logging.error("Нет текста вообще, помечаем как rejected...")
-                    update_news_status(news_id=news["id"], status="rejected", ai_summary="Нет текста")              
+                    update_news_status(news_id=news["id"], status="rejected", ai_summary="Нет текста", full_text="Нет текста")              
                     continue
                 
                 
@@ -76,7 +76,7 @@ def main():
                         logging.error(f"Остановка конвейера. Причина: {ai_result['short_review']}")
                         break
                     new_status = "approved" if ai_result["is_positive"] else "rejected"
-                    update_news_status(news_id=news["id"], status=new_status, ai_summary=ai_result["short_review"])
+                    update_news_status(news_id=news["id"], status=new_status, ai_summary=ai_result["short_review"], full_text=text_to_analyze, title_ru=ai_result["title_ru"])
                     logging.info(f"Ответ от ИИ: {ai_result['short_review']}") 
                     logging.info(f"Новость успешно обновлена в БД со статусом '{new_status}'!")
                     time.sleep(12)
