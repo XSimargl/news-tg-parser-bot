@@ -13,30 +13,73 @@ models_pool = [
     "gemini-2.5-flash"
 ]
 url_news = [
-    # --- ИИ-лаборатории и техногиганты ---
-    "https://openai.com/news/rss.xml",
-    "https://blog.google/innovation-and-ai/technology/ai/rss/",
-    "https://deepmind.google/blog/rss.xml",
-    "https://huggingface.co/blog/feed.xml",
-    "https://bair.berkeley.edu/blog/feed.xml",
-
-    # --- Хардкорная разработка, холивары языков и архитектура (Добавлено) ---
-    "https://hnrss.org/best",                     # Hacker News (только лучшие посты сообщества)
-    "https://lobste.rs/rss",                      # Lobsters — статьи про Rust, C++, Linux и архитектуру без воды
-    "https://blog.cloudflare.com/rss/",           # Инженерный блог Cloudflare (эталонные разборы сбоев и сетей)
-    "https://feeds.arstechnica.com/arstechnica/index", # Ars Technica — глубокие разборы железа, науки и IT
-
-    # --- Разработка и IT (Россия + Мир) ---
-    "https://habr.com/ru/rss/articles/top/",       
-    
-    
-    
-    "https://techcrunch.com/category/artificial-intelligence/feed/",
-
-    # --- Мировая повестка (Global News) ---
-    "https://feeds.bbci.co.uk/news/world/rss.xml",
-    "https://www.theguardian.com/world/rss",
-    "https://feeds.content.dowjones.io/public/rss/RSSWorldNews",
+  "https://habr.com/ru/rss/articles/?fl=ru",
+  "https://habr.com/ru/rss/news/?fl=ru",
+  "https://www.linux.org.ru/section-rss.jsp?section=1",
+  "https://feed.infoq.com/",
+  "https://thenewstack.io/feed/",
+  "https://lwn.net/headlines/rss",
+  "https://news.ycombinator.com/rss",
+  "https://martinfowler.com/feed.atom",
+  "https://github.blog/feed/",
+  "https://github.blog/changelog/feed/",
+  "https://blog.cloudflare.com/rss/",
+  "https://kubernetes.io/feed.xml",
+  "https://www.docker.com/feed/",
+  "https://blog.python.org/rss.xml",
+  "https://blog.rust-lang.org/feed.xml",
+  "https://go.dev/blog/feed.atom",
+  "https://www.postgresql.org/news.rss",
+  "https://huggingface.co/blog/feed.xml",
+  "https://pytorch.org/blog/feed/",
+  "https://research.google/blog/rss/",
+  "https://3dnews.ru/news/rss/",
+  "https://3dnews.ru/cpu/rss/",
+  "https://www.ixbt.com/export/news/rss.xml",
+  "https://www.ixbt.com/export/articles/rss.xml",
+  "https://overclockers.ru/rss/news.rss",
+  "https://servernews.ru/news/rss/",
+  "https://www.tomshardware.com/feeds.xml",
+  "https://www.techpowerup.com/rss/news",
+  "https://www.techpowerup.com/rss/reviews",
+  "https://www.techspot.com/backend.xml",
+  "https://www.techspot.com/reviews.xml",
+  "https://www.phoronix.com/rss.php",
+  
+  "https://www.servethehome.com/feed/",
+  "https://chipsandcheese.com/feed",
+  "https://www.storagereview.com/feed",
+  "https://www.gsmarena.com/rss-news-reviews.php3",
+  "https://www.androidauthority.com/feed",
+  "https://videocardz.com/feed",
+  "https://feeds.arstechnica.com/arstechnica/index",
+  "https://www.theregister.com/headlines.atom",
+  "https://techcrunch.com/feed/",
+  "https://www.wired.com/feed/rss",
+  "https://www.technologyreview.com/feed/",
+  "https://spectrum.ieee.org/feeds/feed.rss",
+  "https://www.bleepingcomputer.com/feed/",
+  "https://krebsonsecurity.com/feed/",
+  "https://www.schneier.com/feed/atom/",
+  "https://feeds.feedburner.com/TheHackersNews",
+  "https://www.securitylab.ru/_services/export/rss/",
+  "https://www.cnews.ru/inc/rss/news.xml",
+  "https://xakep.ru/feed/",
+  
+  
+  "https://feeds.bbci.co.uk/news/world/rss.xml",
+  "https://feeds.bbci.co.uk/news/business/rss.xml",
+  "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
+  "https://rss.dw.com/xml/rss-ru-all",
+  "https://rss.dw.com/xml/rss-en-all",
+  "https://www.france24.com/en/rss",
+  "https://feeds.npr.org/1004/rss.xml",
+  "https://www.interfax.ru/rss",
+  "https://rssexport.rbc.ru/rbcnews/news/30/full.rss",
+  "https://www.kommersant.ru/rss/news.xml",
+  "https://www.nature.com/nature.rss",
+  "https://www.sciencenews.org/feed",
+  "https://nplus1.ru/rss"
 ]
 API_KEY_TG = os.getenv("API_KEY_TG")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")

@@ -6,3 +6,4 @@ data/
 database/news.db
 *.log
 service.log
+test_run.py

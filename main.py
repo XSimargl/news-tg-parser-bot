@@ -1,10 +1,13 @@
 from database.db import init_db, save_news, get_approved_news, update_news_status, clean_old_news, get_raw_news_all, update_bouncer_score, get_selected_news
 from modules.fetcher import get_rss_news, get_article_text
 from modules.processor import news_analis, bouncer_bad_news
-from modules.bot import send_aler
+from modules.bot import send_aler, router
 import config
+from aiogram import Bot, Dispatcher
+from aiogram.enums import ParseMode
+from aiogram.client.default import DefaultBotProperties
 import json
-import asyncio
+import asyncio 
 import logging
 import time
 from logging.handlers import RotatingFileHandler
@@ -20,14 +23,27 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s", 
     handlers=[file_handler, stream_handler]
 )
-def main():
+
+
+async def main():
+    token = config.API_KEY_TG
+    
+    bot = Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    dp = Dispatcher()
+    dp.include_router(router)
+    asyncio.create_task(parser_worker(bot))
+    await dp.start_polling(bot)
+
+
+
+async def parser_worker(bot: Bot):
     init_db()
     while True:
         try:
             #Собераем данные с парсера
             for feed_url in config.url_news:
                 logging.info(f"Проверяем RSS: {feed_url}")
-                news_list = get_rss_news(feed_url, limit=3)
+                news_list = await asyncio.to_thread(get_rss_news(feed_url, limit=3))
                 if news_list: 
                     save_news(news_list)
             
@@ -35,7 +51,7 @@ def main():
             raw_news = get_raw_news_all()
             if raw_news:
                 logging.info(f"Вышибала анализирует {len(raw_news)} новостей...")
-                ai_result = bouncer_bad_news(raw_news)
+                ai_result = await asyncio.to_thread(bouncer_bad_news(raw_news))
                 # Обновляем оценки и статусы в базе
                 for item in ai_result:
                     news_id = item["id"]
@@ -54,7 +70,7 @@ def main():
                     break
                 
                 logging.info(f"Обрабатываем новость: {news['title']}")
-                full_text = get_article_text(news["link"])
+                full_text = await asyncio.to_thread(get_article_text(news["link"]))
                 rss_summary = news.get("summary", "")
                 
                 if full_text and len(full_text) >= 300:
@@ -79,10 +95,10 @@ def main():
                     update_news_status(news_id=news["id"], status=new_status, ai_summary=ai_result["short_review"], full_text=text_to_analyze, title_ru=ai_result["title_ru"])
                     logging.info(f"Ответ от ИИ: {ai_result['short_review']}") 
                     logging.info(f"Новость успешно обновлена в БД со статусом '{new_status}'!")
-                    time.sleep(12)
+                    await asyncio.sleep(3)
                     
                 
-            asyncio.run(send_aler())
+            await send_aler(bot)
             deleted = clean_old_news(keep_limit=500)
             if deleted > 0:
                 logging.info(f"Очистка БД: удалено {deleted} старых записей.")
@@ -90,8 +106,8 @@ def main():
             logging.error(f"Сбой в главном цикле: {err}")
             
         logging.info("Уходим в спячку на 1 час...")
-        time.sleep(3600)
+        await asyncio.sleep(3600)
     
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
