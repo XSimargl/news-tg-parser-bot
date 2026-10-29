@@ -3,15 +3,19 @@ from bs4 import BeautifulSoup
 import httpx
 import logging
 import trafilatura
-
+from curl_cffi import requests
+from urllib.parse import urljoin
+from curl_cffi.requests.errors import RequestsError
 def get_rss_news(rss_url: str, limit: int):
-    headers = {"User-Agent": "Mozilla/5.0"}
+    
+   
     try:
-        response = httpx.get(rss_url, headers=headers, timeout=10.0)
+        response = requests.get(rss_url, impersonate="chrome",  timeout=10.0)
+       
         response.raise_for_status()
         raw_data = feedparser.parse(response.text)
         
-    except httpx.HTTPError as e:
+    except RequestsError as e:
        logging.error(f"Ошибка с парсингом: {e}") 
        return []
     news_list = []
@@ -23,8 +27,8 @@ def get_rss_news(rss_url: str, limit: int):
                 raw_html = item.content[0].get("value", "")
             if not raw_html:
                 raw_html = item.get("summary", "")
-            
-            
+            raw_link = item.get("link", "")
+            safe_link = urljoin(rss_url, raw_link)
             if raw_html:
                 clean_summary = BeautifulSoup(raw_html, "html.parser").get_text(separator=" ", strip=True)
             else:
@@ -33,7 +37,7 @@ def get_rss_news(rss_url: str, limit: int):
 
                 "title": item.get("title"),
 
-                "link": item.get("link"),
+                "link": safe_link,
 
                 "published": item.get("published"),
                 "summary": clean_summary
@@ -43,20 +47,26 @@ def get_rss_news(rss_url: str, limit: int):
     return news_list
 
 def get_article_text(url: str) -> str:
-    downlodr = trafilatura.fetch_url(url)
+    try:
+        downlodr = requests.get(url, impersonate="chrome", timeout=15.0)
     
-    if not downlodr:
-        logging.error(f"Не удолось скачать статью: {url}")
+        if (downlodr.status_code == 200) and ("html" in downlodr.headers.get("Content-Type", "").lower()):
+            text = trafilatura.extract(
+                    downlodr.text,
+                    include_comments=False,
+                    include_tables=True,
+                    output_format="markdown"
+                )
+            if text:
+                return text[:20000]
+                
+        else:
+            logging.error(f"Не удолось скачать статью: {url}")
+            return ""
+    
+    except RequestsError as e:
+        logging.error(f"Сетевая ошибка при скачивании статьи {url}: {e}")
         return ""
-    
-    text = trafilatura.extract(
-        downlodr,
-        include_comments=False,
-        include_tables=True,
-        output_format="markdown"
-    )
-    if text:
-        return text
     return ""
         
 if __name__ == "__main__":

@@ -5,3 +5,4 @@ beautifulsoup4
 aiogram
 google-genai
 trafilatura
+curl_cffi
