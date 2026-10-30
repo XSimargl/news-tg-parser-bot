@@ -37,40 +37,52 @@ async def main():
 
 
 async def parser_worker(bot: Bot):
-    init_db()
+    await asyncio.to_thread(init_db)
     while True:
         try:
             #Собераем данные с парсера
             for feed_url in config.url_news:
                 logging.info(f"Проверяем RSS: {feed_url}")
-                news_list = await asyncio.to_thread(get_rss_news(feed_url, limit=3))
+                news_list = await asyncio.to_thread(get_rss_news,feed_url, limit=3)
                 if news_list: 
-                    save_news(news_list)
+                    await asyncio.to_thread(save_news, news_list)
             
             #Оценивает сырые новости
-            raw_news = get_raw_news_all()
-            if raw_news:
-                logging.info(f"Вышибала анализирует {len(raw_news)} новостей...")
-                ai_result = await asyncio.to_thread(bouncer_bad_news(raw_news))
-                # Обновляем оценки и статусы в базе
-                for item in ai_result:
-                    news_id = item["id"]
-                    score = item["score"]
-                    
-                    if score >= 8:
-                        update_bouncer_score(news_id=news_id, status="selected", score=score)
-                    else:
-                        update_bouncer_score(news_id, status="rejected", score=score)
+            while True:
+                raw_news = await asyncio.to_thread(get_raw_news_all)
+                if raw_news:
+                    logging.info(f"Вышибала анализирует {len(raw_news)} новостей...")
+                    ai_result = await asyncio.to_thread(bouncer_bad_news, raw_news)
+                    original_ids = {news["id"] for news in raw_news}
+                    processend_ids = set()
+                    # Обновляем оценки и статусы в базе
+                    for item in ai_result:
+                        news_id = item["id"]
+                        score = item["score"]
+                        if news_id is None:
+                            continue
+                        if score >= 8:
+                            asyncio.to_thread(update_bouncer_score, news_id=news_id, status="selected", score=score)
+                        else:
+                            asyncio.to_thread(update_bouncer_score, news_id, status="rejected", score=score)
+                            
+                        missing_ids = original_ids - processend_ids
+                        if missing_ids:
+                            logging.warning(f"ИИ пропустил {len(missing_ids)} новостей. Помечаем как rejected.")
+                            for m_id in missing_ids:
+                                await asyncio.to_thread(update_bouncer_score, m_id, "rejected", 0)
+                else:
+                    break
             #глубоко анализирует отобранные новости
             while True:
-                news = get_selected_news()
+                news = await asyncio.to_thread(get_selected_news)
                 
                 if not news:
                     logging.info("Все новости оброботоны")
                     break
                 
                 logging.info(f"Обрабатываем новость: {news['title']}")
-                full_text = await asyncio.to_thread(get_article_text(news["link"]))
+                full_text = await asyncio.to_thread(get_article_text, news["link"])
                 rss_summary = news.get("summary", "")
                 
                 if full_text and len(full_text) >= 300:
@@ -81,7 +93,7 @@ async def parser_worker(bot: Bot):
                     logging.info("Полный текст недоступен. Используем запасное описание из RSS.")
                 else:    
                     logging.error("Нет текста вообще, помечаем как rejected...")
-                    update_news_status(news_id=news["id"], status="rejected", ai_summary="Нет текста", full_text="Нет текста")              
+                    await asyncio.to_thread(update_news_status, news["id"], "rejected", "Нет текста", "Нет текста", None)             
                     continue
                 
                 
@@ -92,14 +104,14 @@ async def parser_worker(bot: Bot):
                         logging.error(f"Остановка конвейера. Причина: {ai_result['short_review']}")
                         break
                     new_status = "approved" if ai_result["is_positive"] else "rejected"
-                    update_news_status(news_id=news["id"], status=new_status, ai_summary=ai_result["short_review"], full_text=text_to_analyze, title_ru=ai_result["title_ru"])
+                    await asyncio.to_thread(update_news_status, news["id"], new_status, ai_result["short_review"], text_to_analyze, ai_result["title_ru"])
                     logging.info(f"Ответ от ИИ: {ai_result['short_review']}") 
                     logging.info(f"Новость успешно обновлена в БД со статусом '{new_status}'!")
                     await asyncio.sleep(3)
                     
                 
             await send_aler(bot)
-            deleted = clean_old_news(keep_limit=500)
+            deleted = await asyncio.to_thread(clean_old_news, 500)
             if deleted > 0:
                 logging.info(f"Очистка БД: удалено {deleted} старых записей.")
         except Exception as err:

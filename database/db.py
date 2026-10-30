@@ -82,7 +82,7 @@ def get_raw_news_all(db_path: str = config.DB_PATH):
     with sqlite3.connect(db_path) as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute("SELECT id, title, summary FROM news WHERE status = 'raw' LIMIT 50")
+        cursor.execute("SELECT id, title, summary FROM news WHERE status = 'raw' LIMIT 15")
         rows = cursor.fetchall()
     conn.close()
     if rows:
@@ -108,3 +108,31 @@ def update_news_grade(news_id: int, grade: int | None = None,db_path: str = conf
             cursor = conn.cursor()
             cursor.execute("UPDATE news SET grade = ? WHERE id = ?", ( grade, news_id))
     conn.close()
+    
+    
+def get_grade_news(db_path: str = config.DB_PATH):
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("""
+                        SELECT title, ai_summary
+                        FROM news 
+                        WHERE grade = 1
+                        ORDER BY id DESC 
+                        LIMIT 15
+                    """)
+        grade_like = [dict(row) for row in cursor.fetchall()]
+        cursor.execute("""
+                                SELECT title,  ai_summary
+                                FROM news 
+                                WHERE grade = -1
+                                ORDER BY id DESC 
+                                LIMIT 15
+                            """)
+        grade_deslike = [dict(row) for row in cursor.fetchall()]
+    
+    conn.close()
+    return {
+        "liked": grade_like,
+        "disliked": grade_deslike
+    }

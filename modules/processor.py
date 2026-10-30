@@ -4,7 +4,7 @@ import config
 import logging
 from google import genai
 from google.genai import types
-
+from database.db import get_grade_news
 
 api_gemini = config.API_KEY_GEMINI
 models_pool = config.models_pool
@@ -13,43 +13,59 @@ client = genai.Client(
 )
 
 def bouncer_bad_news(news_list: list[dict]):
+    news_grade = get_grade_news()
+    liked_text = "\n- ".join(news_grade["liked"]) if news_grade["liked"] else "Пока нет данных"
+    disliked_text = "\n- ".join(news_grade["disliked"]) if news_grade["disliked"] else "Пока нет данных"
     batch_for_ai = [{"id": item["id"], "title": item["title"], "summary": item["summary"][:1000]} for item in news_list]
     
     text_for_ai = json.dumps(batch_for_ai, ensure_ascii=False, indent=2)
     models_pool = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
     "gemini-3.8-flash",
     "gemini-3.6-flash",
     "gemini-3.5-flash",
     "gemini-3-flash",
-    "gemini-3.5-flash-lite",
-    "gemini-3.1-flash-lite",
+    
     "gemini-2.5-flash"
 ]
     BOUNCER_INSTRUCTION = (
-    "Ты — суровый Senior Tech Lead и главный редактор закрытого инженерного канала. "
-    "На вход ты получишь пачку свежих новостей (их ID, заголовки и краткие описания). "
-    "Твоя задача — отсеять информационный мусор и оценить техническую ценность каждой статьи "
-    "по шкале от 1 до 10.\n\n"
-    "КРИТЕРИИ ВЫСОКОЙ ОЦЕНКИ (8-10 баллов - 'Алмазы'):\n"
-    "- Post-mortems (разбор факапов, 'как мы уронили прод и как чинили').\n"
-    "- Глубокая архитектура высоконагруженных систем, баз данных и сетей.\n"
-    "- Реверс-инжиниринг, хардкорная оптимизация, работа с памятью и железом.\n"
-    "- Обоснованные холивары языков (Rust, C++, Python, Go, etc) с техническими аргументами.\n"
-    "- Важные для жизни новости, что происходит в реальном мире.\n"
-    "- Разбор уязвимостей (CVE) с деталями эксплуатации.\n\n"
-    "КРИТЕРИИ МУСОРА (1-4 балла - Сразу на свалку):\n"
-    "- 'Топ 10 плагинов...', 'Как установить Git' и прочие джуновские туториалы.\n"
-    "- Реклама курсов, школ программирования, вебинаров.\n"
-    "- Корпоративные пресс-релизы, меморандумы о партнерствах без технической сути.\n"
-    "- Рассуждения об успешном успехе, выгорании и 'как войти в IT'.\n\n"
-    "ПРАВИЛО ДУБЛИКАТОВ (КРИТИЧЕСКИ ВАЖНО):\n"
-    "Среди новостей могут быть дубликаты (разные сайты написали об одном и том же). "
-    "Твоя задача — заметить это! Выбери только ОДИН самый лучший первоисточник и поставь ему "
-    "заслуженный балл, а всем остальным копиям этого же события ставь 1 балл.\n\n"
-    "ФОРМАТ ОТВЕТА:\n"
-    "Верни строго валидный JSON-массив без маркдаун-оберток (без ```json). Только сам массив.\n"
-    "Пример: [{\"id\": 15, \"score\": 9}, {\"id\": 16, \"score\": 2}]"
-)
+        "Ты — суровый Senior Tech Lead и главный редактор закрытого инженерного канала. "
+        "На вход ты получишь пачку свежих новостей (их ID, заголовки и краткие описания). "
+        "Твоя задача — отсеять информационный мусор и оценить техническую ценность каждой статьи "
+        "по шкале от 1 до 10.\n\n"
+        
+        "ИСТОРИЯ ПРЕДПОЧТЕНИЙ ПОЛЬЗОВАТЕЛЯ (КРИТИЧЕСКИ ВАЖНО):\n"
+        "Сравнивай новые статьи с тем, что пользователь уже оценил. Корректируй итоговый балл на 1-2 очка "
+        "в зависимости от попадания в его вкусы.\n"
+        "ЛЮБИМЫЕ ТЕМЫ (повышай балл, если похоже на это):\n"
+        f"- {liked_text}\n\n"
+        "ЗАБРАКОВАННЫЕ ТЕМЫ (снижай балл, если похоже на это):\n"
+        f"- {disliked_text}\n\n"
+        
+        "КРИТЕРИИ ВЫСОКОЙ ОЦЕНКИ (8-10 баллов - 'Алмазы'):\n"
+        "- Post-mortems (разбор факапов, 'как мы уронили прод и как чинили').\n"
+        "- Глубокая архитектура высоконагруженных систем, баз данных и сетей.\n"
+        "- Реверс-инжиниринг, хардкорная оптимизация, работа с памятью и железом.\n"
+        "- Обоснованные холивары языков (Rust, C++, Python, Go, etc) с техническими аргументами.\n"
+        "- Важные для жизни новости, что происходит в реальном мире.\n"
+        "- Разбор уязвимостей (CVE) с деталями эксплуатации.\n\n"
+        
+        "КРИТЕРИИ МУСОРА (1-4 балла - Сразу на свалку):\n"
+        "- 'Топ 10 плагинов...', 'Как установить Git' и прочие джуновские туториалы.\n"
+        "- Реклама курсов, школ программирования, вебинаров.\n"
+        "- Корпоративные пресс-релизы, меморандумы о партнерствах без технической сути.\n"
+        "- Рассуждения об успешном успехе, выгорании и 'как войти в IT'.\n\n"
+        
+        "ПРАВИЛО ДУБЛИКАТОВ (КРИТИЧЕСКИ ВАЖНО):\n"
+        "Среди новостей могут быть дубликаты (разные сайты написали об одном и том же). "
+        "Твоя задача — заметить это! Выбери только ОДИН самый лучший первоисточник и поставь ему "
+        "заслуженный балл, а всем остальным копиям этого же события ставь 1 балл.\n\n"
+        
+        "ФОРМАТ ОТВЕТА:\n"
+        "Верни строго валидный JSON-массив без маркдаун-оберток (без ```json). Только сам массив.\n"
+        "Пример: [{\"id\": 15, \"score\": 9}, {\"id\": 16, \"score\": 2}]"
+    )
     for model_name in models_pool:
         try:
             
@@ -71,7 +87,9 @@ def bouncer_bad_news(news_list: list[dict]):
     return ""
     
 def news_analis(title: str, text: str):
-    
+    news_grade = get_grade_news()
+    liked_text = "\n- ".join(news_grade["liked"]) if news_grade["liked"] else "Пока нет данных"
+    disliked_text = "\n- ".join(news_grade["disliked"]) if news_grade["disliked"] else "Пока нет данных"
     user_pront = f"Заголовок: {title}\n\n Текст новости: {text}"
     
     for model_name in models_pool:
@@ -84,6 +102,13 @@ def news_analis(title: str, text: str):
                 system_instruction=(
                 "Ты — главный редактор дайджеста для суровых инженеров. "
                 "Твоя задача — отсеять информационный мусор и сделать максимально плотную, фактологическую выжимку из материалов.\n\n"
+                "ИСТОРИЯ ПРЕДПОЧТЕНИЙ ПОЛЬЗОВАТЕЛЯ (КРИТИЧЕСКИ ВАЖНО):\n"
+                "Сравнивай новые статьи с тем, что пользователь уже оценил. Корректируй итоговый балл на 1-2 очка "
+                "в зависимости от попадания в его вкусы.\n"
+                "ЛЮБИМЫЕ ТЕМЫ (повышай балл, если похоже на это):\n"
+                f"- {liked_text}\n\n"
+                "ЗАБРАКОВАННЫЕ ТЕМЫ (снижай балл, если похоже на это):\n"
+                f"- {disliked_text}\n\n"
                 "ЧТО ПРОПУСКАТЬ (is_positive: true):\n"
                 "Мы не ограничиваемся одним языком программирования. Пропускай любые сильные материалы: "
                 "разборы на C++, Rust, Python, Go, споры об архитектуре, истории падения серверов (постмортемы), "
@@ -127,33 +152,5 @@ def news_analis(title: str, text: str):
             time.sleep(2)
     return {"is_positive": None, "short_review": "Ошибка обработки"}
 
-if __name__ == "__main__":
-    test_news = [
-    {
-        "id": 142,
-        "title": "How we migrated from Kubernetes back to bare metal and saved $2M",
-        "summary": "After 4 years of struggling with K8s cluster maintenance and skyrocketing AWS bills, our infrastructure team decided to migrate back to a fleet of bare metal servers managed by Nomad. Here is a detailed post-mortem with architecture schemes and cost breakdown."
-    },
-    {
-        "id": 143,
-        "title": "React 19 RC is finally here: React Compiler in action",
-        "summary": "The React team has announced the Release Candidate for React 19. It includes the new React Compiler, which automatically memoizes your code, dropping the need for useMemo and useCallback in most cases."
-    },
-    {
-        "id": 144,
-        "title": "Топ-5 платных курсов по Python для новичков (Скидки внутри!)",
-        "summary": "Хотите войти в IT, но не знаете с чего начать? Мы собрали для вас лучшие интенсивы и школы программирования, которые обещают трудоустройство за 3 месяца. Переходите по ссылке и забирайте профессию мечты."
-    },
-    {
-        "id": 145,
-        "title": "Уязвимость в популярном пакете npm позволяет выполнить произвольный код",
-        "summary": "Исследователи безопасности обнаружили критическую RCE-уязвимость (CVE-2026-9876) в библиотеке, которая скачивается более 2 млн раз в неделю. Проблема кроется в отсутствии санитизации инпутов при парсинге JSON. Рекомендуется срочно обновиться."
-    },
-    {
-        "id": 146,
-        "title": "Meta releases Llama 5 architecture details: 10x faster inference",
-        "summary": "Meta AI engineering team published a new paper detailing the underlying architecture of Llama 5. By utilizing a novel sparse MoE routing algorithm and custom Triton kernels, they achieved a 10x reduction in memory bandwidth bottlenecks."
-    }
-]
-    print(bouncer_bad_news(test_news))
+
     
