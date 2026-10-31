@@ -12,6 +12,7 @@ def init_db(db_path: str = config.DB_PATH):
                     link TEXT UNIQUE,
                     published TEXT,
                     summary TEXT,
+                    is_analyzed INTEGER DEFAULT 0,
                     full_text TEXT,
                     id_TG_messenge INTEGER,
                     title_ru TEXT DEFAULT NULL,
@@ -21,6 +22,10 @@ def init_db(db_path: str = config.DB_PATH):
                     status  VARCHAR(20) NOT NULL DEFAULT 'raw'
                             CHECK (status IN ('raw', 'selected', 'approved', 'rejected', 'sent')),
                     ai_summary TEXT)""")
+        cursor.execute("""CREATE TABLE IF NOT EXISTS taste_memory (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                    soft_rules TEXT,
+                    hard_rules TEXT,
+                    pending_questions TEXT)""")
     conn.close()
     
     

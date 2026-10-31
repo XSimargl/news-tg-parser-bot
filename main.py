@@ -62,15 +62,16 @@ async def parser_worker(bot: Bot):
                         if news_id is None:
                             continue
                         if score >= 8:
-                            asyncio.to_thread(update_bouncer_score, news_id=news_id, status="selected", score=score)
+                            await asyncio.to_thread(update_bouncer_score, news_id=news_id, status="selected", score=score)
+                            processend_ids.add(news_id)
                         else:
-                            asyncio.to_thread(update_bouncer_score, news_id, status="rejected", score=score)
-                            
-                        missing_ids = original_ids - processend_ids
-                        if missing_ids:
-                            logging.warning(f"ИИ пропустил {len(missing_ids)} новостей. Помечаем как rejected.")
-                            for m_id in missing_ids:
-                                await asyncio.to_thread(update_bouncer_score, m_id, "rejected", 0)
+                            await asyncio.to_thread(update_bouncer_score, news_id, status="rejected", score=score)
+                            processend_ids.add(news_id)
+                    missing_ids = original_ids - processend_ids
+                    if missing_ids:
+                        logging.warning(f"ИИ пропустил {len(missing_ids)} новостей. Помечаем как rejected.")
+                        for m_id in missing_ids:
+                            await asyncio.to_thread(update_bouncer_score, m_id, "rejected", 0)
                 else:
                     break
             #глубоко анализирует отобранные новости
@@ -99,7 +100,7 @@ async def parser_worker(bot: Bot):
                 
                 if text_to_analyze:
                     logging.info("ИИ думает")
-                    ai_result = news_analis(news["title"], text_to_analyze)
+                    ai_result = await asyncio.to_thread(news_analis, news["title"], text_to_analyze)
                     if ai_result["is_positive"] is None:
                         logging.error(f"Остановка конвейера. Причина: {ai_result['short_review']}")
                         break

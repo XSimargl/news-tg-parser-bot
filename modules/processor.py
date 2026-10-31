@@ -14,8 +14,10 @@ client = genai.Client(
 
 def bouncer_bad_news(news_list: list[dict]):
     news_grade = get_grade_news()
-    liked_text = "\n- ".join(news_grade["liked"]) if news_grade["liked"] else "Пока нет данных"
-    disliked_text = "\n- ".join(news_grade["disliked"]) if news_grade["disliked"] else "Пока нет данных"
+    liked_text = "\n".join([item["title"] for item in news_grade["liked"]]) if news_grade["liked"] else "Пока нет данных"
+
+    disliked_text = "\n".join([item["title"] for item in news_grade["disliked"]]) if news_grade["disliked"] else "Пока нет данных"
+
     batch_for_ai = [{"id": item["id"], "title": item["title"], "summary": item["summary"][:1000]} for item in news_list]
     
     text_for_ai = json.dumps(batch_for_ai, ensure_ascii=False, indent=2)
